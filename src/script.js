@@ -18,10 +18,12 @@ const sizes = {
 };
 // var context = new AudioContext();
 let context;
+let analyser;
 var vizInit = function () {
   var file = document.getElementById("thefile");
   var audio = document.getElementById("audio");
   var fileLabel = document.querySelector("label.file");
+  let dataArray;
   console.log(audio);
   document.onload = function (e) {
     console.log(e);
@@ -53,7 +55,6 @@ var vizInit = function () {
     clock,
     plane,
     controls,
-    analyser,
     material,
     innerMesh,
     innerMaterial,
@@ -75,12 +76,12 @@ var vizInit = function () {
     var context = new AudioContext();
     console.log(audio);
     var src = context.createMediaElementSource(audio);
-    var analyser = context.createAnalyser();
+    analyser = context.createAnalyser();
     src.connect(analyser);
     analyser.connect(context.destination);
     analyser.fftSize = 512;
     var bufferLength = analyser.frequencyBinCount;
-    var dataArray = new Uint8Array(bufferLength);
+    dataArray = new Uint8Array(bufferLength);
     console.log(analyser);
 
     /*------------------------------
@@ -210,16 +211,20 @@ var vizInit = function () {
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }
+  function tick() {
+    console.log(analyser);
+    console.log(dataArray);
+    analyser.getByteFrequencyData(dataArray);
 
-  const tick = () => {
+    let averageFreq = getAverageFrequency(dataArray);
     const elapsedTime = clock.getElapsedTime();
     // analyser.getFrequencyData();
     // let averageFreq = analyser.getAverageFrequency();
 
     material.uniforms.uTime.value = clock.getElapsedTime();
     innerMaterial.uniforms.uTime.value = clock.getElapsedTime();
-    // material.uniforms.uFreq.value = averageFreq;
-    // innerMaterial.uniforms.uFreq.value = averageFreq;
+    material.uniforms.uFreq.value = averageFreq;
+    innerMaterial.uniforms.uFreq.value = averageFreq;
     // Update objects:
     sphere.rotation.x += 0.02;
     innerMesh.rotation.z -= 0.01;
@@ -234,10 +239,21 @@ var vizInit = function () {
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick);
-  };
+  }
 };
 window.onload = vizInit();
 
 document.body.addEventListener("touchend", function (ev) {
   context.resume();
 });
+
+function getAverageFrequency(dataArray) {
+  let value = 0;
+  const data = dataArray;
+
+  for (let i = 0; i < data.length; i++) {
+    value += data[i];
+  }
+
+  return value / data.length;
+}
