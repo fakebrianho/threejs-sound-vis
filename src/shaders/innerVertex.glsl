@@ -1,6 +1,9 @@
 uniform float uTime;
 varying vec2 vUv;
 varying float pulse;
+uniform float uMidF;
+uniform float uHighF;
+uniform float uLowF;
 float snoise(vec4 v){
   const vec2  C = vec2( 0.138196601125010504,  // (5 - sqrt(5))/20  G4
                         0.309016994374947451); // (sqrt(5) - 1)/4   F4
@@ -77,11 +80,10 @@ float snoise(vec4 v){
 void main(){
   float PI = 3.1415926;
   float sine = sin(PI * uTime);
-  float noise = snoise(vec4(normal*40.,time*0.1));
+  float noise = snoise(vec4(normal*40.,time*0.1 * uHighF));
   pulse = noise.x;
   vUv = uv;
-  float waves = sine*0.1 *sin(5.*length(uv)+15.);
-  vec4 mvPosition = modelViewMatrix * vec4(position  + waves, 1.0);
+  float waves = sine*0.1 *sin(5.*length(uv)+15. * uLowF);
+  vec4 mvPosition = modelViewMatrix * vec4(position  + waves*0.1, 1.0);
   gl_Position = projectionMatrix * mvPosition;
-  // gl_PointSize = 2. + noise;
 }

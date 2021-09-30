@@ -1,17 +1,22 @@
 import "./style.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { IncrementWrapStencilOp, TetrahedronGeometry } from "three";
+import {
+  AdditiveBlending,
+  IncrementWrapStencilOp,
+  TetrahedronGeometry,
+} from "three";
 import * as dat from "dat.gui";
 import { nextElementSibling } from "domutils";
 import vertex from "./shaders/vertexShader.glsl";
 import fragment from "./shaders/fragmentShader.glsl";
 import iVertex from "./shaders/innerVertex.glsl";
 import iFragment from "./shaders/innerFragment.glsl";
-/**
- *
- * Debug
- */
+import v2 from "./shaders/fluffyVertex.glsl";
+import f2 from "./shaders/fluffyFragment.glsl";
+import v3 from "./shaders/testVert.glsl";
+import f3 from "./shaders/testFrag.glsl";
+
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
@@ -19,12 +24,14 @@ const sizes = {
 // var context = new AudioContext();
 let context;
 let analyser;
+let splitArray = [];
 var vizInit = function () {
   var file = document.getElementById("thefile");
   var audio = document.getElementById("audio");
   var fileLabel = document.querySelector("label.file");
   let dataArray;
-  console.log(audio);
+  let bufferTime;
+  console.log(audio.volume);
   document.onload = function (e) {
     console.log(e);
     console.log(audio);
@@ -43,8 +50,6 @@ var vizInit = function () {
     init();
   };
 
-  // const startButton = document.getElementById("startButton");
-  // startButton.addEventListener("click", init);
   let gui,
     canvas,
     scene,
@@ -57,21 +62,8 @@ var vizInit = function () {
     controls,
     material,
     innerMesh,
-    innerMaterial,
-    torus;
-  // const fftSize = 128;
-  // const listener = new THREE.AudioListener();
-  // const threeAudio = new THREE.Audio(listener);
-  // const file = "/sounds/376737_Skullbeatz___Bad_Cat_Maste.mp3";
-  // const mediaElement = new Audio(file);
+    innerMaterial;
 
-  // mediaElement.play();
-
-  // threeAudio.setMediaElementSource(mediaElement);
-  // const aanalyser = new THREE.AudioAnalyser(threeAudio, fftSize);
-  // console.log(aanalyser);
-  // let averageFreq = analyser.getAverageFrequency();
-  console.log(audio);
   function init() {
     var context = new AudioContext();
     console.log(audio);
@@ -79,10 +71,12 @@ var vizInit = function () {
     analyser = context.createAnalyser();
     src.connect(analyser);
     analyser.connect(context.destination);
+    //48000
     analyser.fftSize = 512;
     var bufferLength = analyser.frequencyBinCount;
     dataArray = new Uint8Array(bufferLength);
-    console.log(analyser);
+    bufferTime = new Uint8Array(bufferLength);
+    analyser.getByteTimeDomainData(bufferTime);
 
     /*------------------------------
     Sound 
@@ -94,7 +88,9 @@ var vizInit = function () {
     ------------------------------*/
     canvas = document.querySelector("canvas.webgl");
 
-    // Scene
+    /*------------------------------
+    Set up 
+    ------------------------------*/
     scene = new THREE.Scene();
 
     /**
@@ -109,8 +105,8 @@ var vizInit = function () {
 
     // const material = new THREE.MeshStandardMaterial();
     /*------------------------------
-  materials
-  ------------------------------*/
+    Materials
+    ------------------------------*/
     material = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
@@ -118,22 +114,34 @@ var vizInit = function () {
       },
       vertexShader: vertex,
       fragmentShader: fragment,
+      blending: THREE.AdditiveBlending,
+      alphaTest: 0.001,
+      depthWrite: false,
     });
     innerMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 1.0 },
-        uFreq: { value: 1.0 },
+        uFreq: { value: 0.0 },
+        uAmp: { value: 0.0 },
+        uLowF: { value: 0.0 },
+        uMidF: { value: 0.0 },
+        uHighF: { value: 0.0 },
         resolution: { value: new THREE.Vector2() },
       },
-      vertexShader: vertex,
-      fragmentShader: iFragment,
+      wireframe: true,
+      // vertexShader: vertex,
+      // fragmentShader: iFragment,
+      // vertexShader: v2,
+      // fragmentShader: f2,
+      vertexShader: v3,
+      fragmentShader: f3,
     });
 
     /*------------------------------
-  meshes
-  ------------------------------*/
+    Meshes
+    ------------------------------*/
     sphere = new THREE.Points(
-      new THREE.SphereBufferGeometry(1.0, 64, 64),
+      new THREE.SphereBufferGeometry(0.75, 164, 164),
       material
     );
     sphere.geometry.setAttribute(
@@ -141,7 +149,7 @@ var vizInit = function () {
       new THREE.BufferAttribute(sphere.geometry.attributes.uv.array, 2)
     );
 
-    const innerGeometry = new THREE.SphereBufferGeometry(0.5, 560, 560);
+    const innerGeometry = new THREE.SphereBufferGeometry(1.0, 64, 64);
     innerMesh = new THREE.Mesh(innerGeometry, innerMaterial);
 
     scene.add(sphere, innerMesh);
@@ -212,40 +220,59 @@ var vizInit = function () {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }
   function tick() {
-    console.log(analyser);
-    console.log(dataArray);
     analyser.getByteFrequencyData(dataArray);
-
+    analyser.getByteTimeDomainData(bufferTime);
+    for (let i = 0; i < dataArray.length; i++) {
+      let freqToHerz = i * (48000 / 512);
+      if (freqToHerz <= 500) {
+        let lower = mapper(dataArray[i], 0, 256, 0, 1.0);
+        innerMaterial.uniforms.uLowF.value = lower;
+      } else if (500 < freqToHerz <= 2000) {
+        let middle = mapper(dataArray[i], 0, 256, 0, 1.0);
+        console.log(dataArray[i]);
+        console.log(middle);
+        innerMaterial.uniforms.uMidF.value = middle;
+      } else if (2000 < freqToHerz <= 10000) {
+        let upper = mapper(dataArray[i], 0, 256, 0, 1.0);
+        innerMaterial.uniforms.uHighF.value = upper;
+      }
+    }
+    let averageAmplitude = getRMS(bufferTime);
     let averageFreq = getAverageFrequency(dataArray);
     const elapsedTime = clock.getElapsedTime();
-    // analyser.getFrequencyData();
-    // let averageFreq = analyser.getAverageFrequency();
-
     material.uniforms.uTime.value = clock.getElapsedTime();
     innerMaterial.uniforms.uTime.value = clock.getElapsedTime();
     material.uniforms.uFreq.value = averageFreq;
     innerMaterial.uniforms.uFreq.value = averageFreq;
-    // Update objects:
+    innerMaterial.uniforms.uAmp.value = averageAmplitude;
+
+    /*------------------------------
+    Move the objects:
+    ------------------------------*/
     sphere.rotation.x += 0.02;
     innerMesh.rotation.z -= 0.01;
-    // Update controls
+    /*------------------------------
+    Update Controls
+    ------------------------------*/
     controls.update();
-    // Update Camera;
+    /*------------------------------
+    Update Camera Movement
+    ------------------------------*/
     camera.rotation.x = Math.sin(elapsedTime);
     camera.rotation.y = Math.cos(elapsedTime);
     camera.lookAt(new THREE.Vector3());
-    // Render
+    /*------------------------------
+    Render everything!
+    ------------------------------*/
     renderer.render(scene, camera);
 
-    // Call tick again on the next frame
+    /*------------------------------
+    Animation frames
+    ------------------------------*/
     window.requestAnimationFrame(tick);
   }
 };
 window.onload = vizInit();
-
-document.body.addEventListener("touchend", function (ev) {
-  context.resume();
-});
 
 function getAverageFrequency(dataArray) {
   let value = 0;
@@ -257,3 +284,20 @@ function getAverageFrequency(dataArray) {
 
   return value / data.length;
 }
+
+function getRMS(bufferTime) {
+  let bTime = bufferTime;
+  var rms = 0;
+  for (let i = 0; i < bTime.length; i++) {
+    rms += bTime[i] * bTime[i];
+  }
+  rms /= bTime.length;
+  rms = Math.sqrt(rms);
+  return rms;
+}
+
+function mapper(value, x1, y1, x2, y2) {
+  return ((value - x1) * (y2 - x2)) / (y1 - x1) + x2;
+}
+// const map = (value, x1, y1, x2, y2) =>
+//   ((value - x1) * (y2 - x2)) / (y1 - x1) + x2;
