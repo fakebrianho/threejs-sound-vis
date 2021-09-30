@@ -4,6 +4,9 @@ varying vec3 vNormal;
 varying float lowFreq;
 varying float medFreq;
 varying float highFreq;
+varying float lowPower;
+varying float medPower;
+varying float highPower;
 
 void main(){
   // vec4 newPosition=vec4(position,1.);

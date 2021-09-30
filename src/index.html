@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>12 - Materials</title>
+    <title>WebGL Audio Visualizer</title>
     <link type="text/css" rel="stylesheet" href="style.css">
     <link rel="shortcut icon" href="#" />
-
+    <!-- <script src="https://cdn.jsdelivr.net/npm/tweakpane@3.0.5/dist/tweakpane.min.js"></script> -->
 </head>
 <body>
   <div id="content">
@@ -19,9 +19,15 @@
     <div id="out"></div>
   </div>
     <canvas class="webgl"></canvas>
-    <!-- <div id="overlay"> -->
-        <!-- <button id="startButton">Play</button> -->
-    <!-- </div> -->
-    <!-- <script src='p5.sound.min.js'></script> -->
+    <div class='modal active' id='modal'>
+    <div class='modal-header'>
+      <div class='title'>Example Modal</div>
+      <button data-close-button class='close-button'>&times;</button>
+    </div>
+    <div class='modal-body'>
+      Lorem ipsum dolor, sit amet consectetur adipisicing elit. Saepe ducimus aut itaque quam recusandae debitis placeat libero vero totam dolor, tempore, at ipsa distinctio accusantium maxime similique in. Neque, molestiae!
+    </div>
+    </div>
+    <div class='active' id="overlay"></div>
 </body>
 </html>

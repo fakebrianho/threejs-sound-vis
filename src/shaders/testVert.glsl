@@ -1,14 +1,22 @@
 uniform float uTime;
 uniform float uAmp;
+uniform float uAP;
 uniform float uFreq;
+uniform float uFP;
 uniform float uLowF;
+uniform float uLFP;
 uniform float uMidF;
+uniform float uMFP;
 uniform float uHighF;
+uniform float uHFP;
 
 varying vec3 vNormal;
 varying float lowFreq;
 varying float medFreq;
 varying float highFreq;
+varying float lowPower;
+varying float medPower;
+varying float highPower;
 
 //
 // Description : Array and textureless GLSL 2D simplex noise function.
@@ -131,15 +139,15 @@ vNormal=normal;
 lowFreq=uLowF;
 medFreq=uMidF;
 highFreq=uHighF;
+lowPower=uLFP;
+medPower=uMFP;
+highPower=uHFP;
 
 vec4 newPosition=vec4(position,1.);
 
-// float normalZ=vNormal.z;
+float frequency=uFreq*.025*uFP;
+float amplitude=uAmp*.00145*uAP;
 
-float frequency=uFreq*.025;
-float amplitude=uAmp*.00145;
-
-// float displacement=sin(newPosition.z*frequency+uTime*.5);
 vec3 displacement=curl(frequency*newPosition.x,frequency*newPosition.y,frequency*newPosition.z);
 
 newPosition.x+=displacement.x*vNormal.x*amplitude;

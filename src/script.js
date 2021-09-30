@@ -7,6 +7,7 @@ import {
   TetrahedronGeometry,
 } from "three";
 import * as dat from "dat.gui";
+import { Pane } from "tweakpane";
 import { nextElementSibling } from "domutils";
 import vertex from "./shaders/vertexShader.glsl";
 import fragment from "./shaders/fragmentShader.glsl";
@@ -17,11 +18,73 @@ import f2 from "./shaders/fluffyFragment.glsl";
 import v3 from "./shaders/testVert.glsl";
 import f3 from "./shaders/testFrag.glsl";
 
+/*------------------------------
+Instructions
+------------------------------*/
+const openModal = document.querySelectorAll("[data-modal-target]");
+const closeModal = document.querySelectorAll("[data-close-button]");
+const overlay = document.getElementById("overlay");
+
+openModal.forEach((button) => {
+  button.addEventListener("click", () => {
+    const modal = document.querySelector(button.dataset.modalTarget);
+    openM(modal);
+  });
+});
+closeModal.forEach((button) => {
+  button.addEventListener("click", () => {
+    const modal = button.closest(".modal");
+    closeM(modal);
+  });
+});
+
+function openM(modal) {
+  if (modal == null) return;
+  modal.classList.add("active");
+  overlay.classList.add("active");
+}
+function closeM(modal) {
+  if (modal == null) return;
+  modal.classList.remove("active");
+  overlay.classList.remove("active");
+}
+/*------------------------------
+GUI
+------------------------------*/
+const PARAMS = {
+  LowFrequencyPower: 1.0,
+  MidFrequencyPower: 1.0,
+  HighFrequencyPower: 1.0,
+  AverageFrequencyPower: 1.0,
+  AmplitudePower: 1.0,
+};
+
+const pane = new Pane();
+
+pane.addInput(PARAMS, "LowFrequencyPower", { min: 0.1, max: 2.0, step: 0.1 });
+pane.addInput(PARAMS, "MidFrequencyPower", { min: 0.1, max: 2.0, step: 0.1 });
+pane.addInput(PARAMS, "HighFrequencyPower", { min: 0.1, max: 2.0, step: 0.1 });
+pane.addInput(PARAMS, "AverageFrequencyPower", {
+  min: 0.1,
+  max: 2.0,
+  step: 0.1,
+});
+pane.addInput(PARAMS, "AmplitudePower", { min: 0.1, max: 2.0, step: 0.1 });
+// pane.addInput(PARAMS, "title");
+// pane.addInput(PARAMS, "color");
+
+pane.on("change", (ev) => {
+  // console.log()
+  // innerMaterial.uniforms.uFP.value = ev.value;
+  console.log(ev.value);
+});
+/*------------------------------
+Globals
+------------------------------*/
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
 };
-// var context = new AudioContext();
 let context;
 let analyser;
 let splitArray = [];
@@ -81,7 +144,6 @@ var vizInit = function () {
     /*------------------------------
     Sound 
     ------------------------------*/
-    gui = new dat.GUI();
 
     /*------------------------------
     Allocating the canvas space
@@ -122,10 +184,15 @@ var vizInit = function () {
       uniforms: {
         uTime: { value: 1.0 },
         uFreq: { value: 0.0 },
+        uFP: { value: 1.0 },
         uAmp: { value: 0.0 },
+        uAP: { value: 1.0 },
         uLowF: { value: 0.0 },
+        uLFP: { value: 1.0 },
         uMidF: { value: 0.0 },
+        uMFP: { value: 1.0 },
         uHighF: { value: 0.0 },
+        uHFP: { value: 1.0 },
         resolution: { value: new THREE.Vector2() },
       },
       wireframe: true,
@@ -229,8 +296,6 @@ var vizInit = function () {
         innerMaterial.uniforms.uLowF.value = lower;
       } else if (500 < freqToHerz <= 2000) {
         let middle = mapper(dataArray[i], 0, 256, 0, 1.0);
-        console.log(dataArray[i]);
-        console.log(middle);
         innerMaterial.uniforms.uMidF.value = middle;
       } else if (2000 < freqToHerz <= 10000) {
         let upper = mapper(dataArray[i], 0, 256, 0, 1.0);
@@ -240,11 +305,19 @@ var vizInit = function () {
     let averageAmplitude = getRMS(bufferTime);
     let averageFreq = getAverageFrequency(dataArray);
     const elapsedTime = clock.getElapsedTime();
+    /*------------------------------
+    Passing Data into The Shaders Via Uniforms
+    ------------------------------*/
     material.uniforms.uTime.value = clock.getElapsedTime();
     innerMaterial.uniforms.uTime.value = clock.getElapsedTime();
     material.uniforms.uFreq.value = averageFreq;
     innerMaterial.uniforms.uFreq.value = averageFreq;
     innerMaterial.uniforms.uAmp.value = averageAmplitude;
+    innerMaterial.uniforms.uFP.value = PARAMS.AverageFrequencyPower;
+    innerMaterial.uniforms.uAP.value = PARAMS.AmplitudePower;
+    innerMaterial.uniforms.uLFP.value = PARAMS.LowFrequencyPower;
+    innerMaterial.uniforms.uMFP.value = PARAMS.MidFrequencyPower;
+    innerMaterial.uniforms.uHFP.value = PARAMS.HighFrequencyPower;
 
     /*------------------------------
     Move the objects:
