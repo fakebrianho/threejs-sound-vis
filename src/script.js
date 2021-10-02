@@ -1,22 +1,19 @@
 import "./style.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import {
-  AdditiveBlending,
-  IncrementWrapStencilOp,
-  TetrahedronGeometry,
-} from "three";
-import * as dat from "dat.gui";
 import { Pane } from "tweakpane";
-import { nextElementSibling } from "domutils";
 import vertex from "./shaders/vertexShader.glsl";
 import fragment from "./shaders/fragmentShader.glsl";
-import iVertex from "./shaders/innerVertex.glsl";
-import iFragment from "./shaders/innerFragment.glsl";
-import v2 from "./shaders/fluffyVertex.glsl";
-import f2 from "./shaders/fluffyFragment.glsl";
 import v3 from "./shaders/testVert.glsl";
 import f3 from "./shaders/testFrag.glsl";
+import {
+  BloomEffect,
+  EffectComposer,
+  EffectPass,
+  RenderPass,
+  BlendFunction,
+  KernelSize,
+} from "postprocessing";
 
 /*------------------------------
 Instructions
@@ -37,7 +34,6 @@ closeModal.forEach((button) => {
     closeM(modal);
   });
 });
-
 function openM(modal) {
   if (modal == null) return;
   modal.classList.add("active");
@@ -48,10 +44,17 @@ function closeM(modal) {
   modal.classList.remove("active");
   overlay.classList.remove("active");
 }
+
 /*------------------------------
 GUI
 ------------------------------*/
 const PARAMS = {
+  AverageFrequencyPower: 1.0,
+  AmplitudePower: 1.0,
+  Color1: 0xff0000,
+  Color2: 0xffff00,
+};
+const PARAMS2 = {
   LowFrequencyPower: 1.0,
   MidFrequencyPower: 1.0,
   HighFrequencyPower: 1.0,
@@ -60,24 +63,52 @@ const PARAMS = {
 };
 
 const pane = new Pane();
+const tab = pane.addTab({
+  pages: [{ title: "Outer Mesh" }, { title: "Inner Mesh" }],
+});
 
-pane.addInput(PARAMS, "LowFrequencyPower", { min: 0.1, max: 2.0, step: 0.1 });
-pane.addInput(PARAMS, "MidFrequencyPower", { min: 0.1, max: 2.0, step: 0.1 });
-pane.addInput(PARAMS, "HighFrequencyPower", { min: 0.1, max: 2.0, step: 0.1 });
-pane.addInput(PARAMS, "AverageFrequencyPower", {
+tab.pages[0].addInput(PARAMS2, "LowFrequencyPower", {
+  min: 0.0,
+  max: 3.0,
+  step: 0.1,
+});
+tab.pages[0].addInput(PARAMS2, "MidFrequencyPower", {
+  min: 0.0,
+  max: 3.0,
+  step: 0.1,
+});
+tab.pages[0].addInput(PARAMS2, "HighFrequencyPower", {
+  min: 0.0,
+  max: 3.0,
+  step: 0.1,
+});
+tab.pages[0].addInput(PARAMS2, "AverageFrequencyPower", {
   min: 0.1,
   max: 2.0,
   step: 0.1,
 });
-pane.addInput(PARAMS, "AmplitudePower", { min: 0.1, max: 2.0, step: 0.1 });
-// pane.addInput(PARAMS, "title");
-// pane.addInput(PARAMS, "color");
-
-pane.on("change", (ev) => {
-  // console.log()
-  // innerMaterial.uniforms.uFP.value = ev.value;
-  console.log(ev.value);
+tab.pages[0].addInput(PARAMS2, "AmplitudePower", {
+  min: 0.1,
+  max: 2.0,
+  step: 0.1,
 });
+tab.pages[1].addInput(PARAMS, "AverageFrequencyPower", {
+  min: 0.1,
+  max: 2.0,
+  step: 0.1,
+});
+tab.pages[1].addInput(PARAMS, "AmplitudePower", {
+  min: 0.1,
+  max: 2.0,
+  step: 0.1,
+});
+tab.pages[1].addInput(PARAMS, "Color1", {
+  view: "color",
+});
+tab.pages[1].addInput(PARAMS, "Color2", {
+  view: "color",
+});
+
 /*------------------------------
 Globals
 ------------------------------*/
@@ -105,7 +136,6 @@ var vizInit = function () {
     fileLabel.classList.add("normal");
     audio.classList.add("active");
     var files = this.files;
-
     audio.src = URL.createObjectURL(files[0]);
     console.log(audio);
     audio.load();
@@ -116,7 +146,7 @@ var vizInit = function () {
   let gui,
     canvas,
     scene,
-    tLoader,
+    composer,
     sphere,
     camera,
     renderer,
@@ -126,24 +156,23 @@ var vizInit = function () {
     material,
     innerMesh,
     innerMaterial;
-
+  /*------------------------------
+  Beginning my visualization 
+  ------------------------------*/
   function init() {
+    /*------------------------------
+    Sound 
+    ------------------------------*/
     var context = new AudioContext();
-    console.log(audio);
     var src = context.createMediaElementSource(audio);
     analyser = context.createAnalyser();
     src.connect(analyser);
     analyser.connect(context.destination);
-    //48000
     analyser.fftSize = 512;
     var bufferLength = analyser.frequencyBinCount;
     dataArray = new Uint8Array(bufferLength);
     bufferTime = new Uint8Array(bufferLength);
     analyser.getByteTimeDomainData(bufferTime);
-
-    /*------------------------------
-    Sound 
-    ------------------------------*/
 
     /*------------------------------
     Allocating the canvas space
@@ -155,17 +184,6 @@ var vizInit = function () {
     ------------------------------*/
     scene = new THREE.Scene();
 
-    /**
-     * Sizes
-     */
-
-    /**
-     * Loading Textures
-     */
-    tLoader = new THREE.TextureLoader();
-    const doorColorTextures = tLoader.load("/textures/door/color.jpg");
-
-    // const material = new THREE.MeshStandardMaterial();
     /*------------------------------
     Materials
     ------------------------------*/
@@ -173,6 +191,18 @@ var vizInit = function () {
       uniforms: {
         uTime: { value: 0 },
         uFreq: { value: 0 },
+        uFP: { value: 1.0 },
+        uAmp: { value: 0.0 },
+        uAP: { value: 1.0 },
+        uLowF: { value: 0.0 },
+        uLFP: { value: 1.0 },
+        uMidF: { value: 0.0 },
+        uMFP: { value: 1.0 },
+        uHighF: { value: 0.0 },
+        uHFP: { value: 1.0 },
+
+        uColor1: { value: null },
+        uColor2: { value: null },
       },
       vertexShader: vertex,
       fragmentShader: fragment,
@@ -196,10 +226,6 @@ var vizInit = function () {
         resolution: { value: new THREE.Vector2() },
       },
       wireframe: true,
-      // vertexShader: vertex,
-      // fragmentShader: iFragment,
-      // vertexShader: v2,
-      // fragmentShader: f2,
       vertexShader: v3,
       fragmentShader: f3,
     });
@@ -218,7 +244,6 @@ var vizInit = function () {
 
     const innerGeometry = new THREE.SphereBufferGeometry(1.0, 64, 64);
     innerMesh = new THREE.Mesh(innerGeometry, innerMaterial);
-
     scene.add(sphere, innerMesh);
 
     /*------------------------------
@@ -230,9 +255,9 @@ var vizInit = function () {
     pointLight.position.y = 3;
     pointLight.position.x = 4;
     scene.add(ambientLight, pointLight);
-
-    // gui.add(material, "metalness").min(0).max(1).step(0.001);
-    // gui.add(material, "roughness").min(0).max(1).step(0.001);
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    mainLight.position.set(-1, 1, 1);
+    scene.add(mainLight);
 
     /*------------------------------
     Camera
@@ -259,23 +284,40 @@ var vizInit = function () {
     ------------------------------*/
     renderer = new THREE.WebGLRenderer({
       canvas: canvas,
+      antialias: true,
+      alpha: true,
     });
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.autoClear = false;
+    renderer.setClearColor(0x000000, 0.0);
+
+    /*------------------------------
+    Post Processing
+    ------------------------------*/
+    const bloomOptions = {
+      blendFunction: BlendFunction.SCREEN,
+      kernelSize: KernelSize.MEDIUM,
+      luminanceThreshold: 0.093,
+      luminanceSmoothing: 0.1,
+      height: 480,
+      intensity: 1.6,
+    };
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    composer.addPass(new EffectPass(camera, new BloomEffect(bloomOptions)));
+    EffectPass.renderToScreen = true;
 
     /*------------------------------
     Animation Time
     ------------------------------*/
     clock = new THREE.Clock();
-
-    /*------------------------------
-    Sound   
-    ------------------------------*/
-
     tick();
     window.addEventListener("resize", onWindowResize, false);
   }
-
+  /*------------------------------
+  Make THREE.js Resizeable
+  ------------------------------*/
   function onWindowResize() {
     sizes.width = window.innerWidth;
     sizes.height = window.innerHeight;
@@ -286,6 +328,9 @@ var vizInit = function () {
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }
+  /*------------------------------
+  Animation Loop
+  ------------------------------*/
   function tick() {
     analyser.getByteFrequencyData(dataArray);
     analyser.getByteTimeDomainData(bufferTime);
@@ -305,6 +350,7 @@ var vizInit = function () {
     let averageAmplitude = getRMS(bufferTime);
     let averageFreq = getAverageFrequency(dataArray);
     const elapsedTime = clock.getElapsedTime();
+
     /*------------------------------
     Passing Data into The Shaders Via Uniforms
     ------------------------------*/
@@ -313,31 +359,41 @@ var vizInit = function () {
     material.uniforms.uFreq.value = averageFreq;
     innerMaterial.uniforms.uFreq.value = averageFreq;
     innerMaterial.uniforms.uAmp.value = averageAmplitude;
-    innerMaterial.uniforms.uFP.value = PARAMS.AverageFrequencyPower;
-    innerMaterial.uniforms.uAP.value = PARAMS.AmplitudePower;
-    innerMaterial.uniforms.uLFP.value = PARAMS.LowFrequencyPower;
-    innerMaterial.uniforms.uMFP.value = PARAMS.MidFrequencyPower;
-    innerMaterial.uniforms.uHFP.value = PARAMS.HighFrequencyPower;
+    innerMaterial.uniforms.uFP.value = PARAMS2.AverageFrequencyPower;
+    innerMaterial.uniforms.uAP.value = PARAMS2.AmplitudePower;
+    innerMaterial.uniforms.uLFP.value = PARAMS2.LowFrequencyPower;
+    innerMaterial.uniforms.uMFP.value = PARAMS2.MidFrequencyPower;
+    innerMaterial.uniforms.uHFP.value = PARAMS2.HighFrequencyPower;
+    material.uniforms.uColor1.value = new THREE.Color(PARAMS.Color1);
+    material.uniforms.uColor2.value = new THREE.Color(PARAMS.Color2);
+    material.uniforms.uFreq.value = averageFreq;
+    material.uniforms.uAmp.value = averageAmplitude;
+    material.uniforms.uFP.value = PARAMS.AverageFrequencyPower;
+    material.uniforms.uAP.value = PARAMS.AmplitudePower;
 
     /*------------------------------
     Move the objects:
     ------------------------------*/
     sphere.rotation.x += 0.02;
     innerMesh.rotation.z -= 0.01;
+
     /*------------------------------
     Update Controls
     ------------------------------*/
     controls.update();
+
     /*------------------------------
     Update Camera Movement
     ------------------------------*/
     camera.rotation.x = Math.sin(elapsedTime);
     camera.rotation.y = Math.cos(elapsedTime);
     camera.lookAt(new THREE.Vector3());
+
     /*------------------------------
     Render everything!
     ------------------------------*/
-    renderer.render(scene, camera);
+    // renderer.render(scene, camera);
+    composer.render();
 
     /*------------------------------
     Animation frames
@@ -347,6 +403,11 @@ var vizInit = function () {
 };
 window.onload = vizInit();
 
+/*------------------------------
+Nitty gritty audio data anlyzing, 
+figuring out average frequencies 
+and which ranges are in play
+------------------------------*/
 function getAverageFrequency(dataArray) {
   let value = 0;
   const data = dataArray;
@@ -372,5 +433,3 @@ function getRMS(bufferTime) {
 function mapper(value, x1, y1, x2, y2) {
   return ((value - x1) * (y2 - x2)) / (y1 - x1) + x2;
 }
-// const map = (value, x1, y1, x2, y2) =>
-//   ((value - x1) * (y2 - x2)) / (y1 - x1) + x2;

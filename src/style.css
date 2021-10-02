@@ -1,6 +1,6 @@
 :root{
-  --bgColor : rgb(80, 53, 177);
-  --bgColorLight : hsla(242, 86%, 24%, 1);
+  --bgColorLight :#1d3d96; 
+  --bgColor : #ad1548;
   --textColor : hsla(242, 86%, 88%, 1);
   --textColorDark : hsla(242, 36%, 0%, 1);
   --paperColor: rgb(17, 36, 143);
@@ -11,8 +11,11 @@
 ::selected{
   color: var(--textColorDark);
 }
-
-html, body{
+@font-face {
+  font-family: vaporWAVE;
+  src: url(../static/fonts/FoxCavalier-WyzrE.ttf);
+}
+html {
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -24,7 +27,21 @@ html, body{
   font-family: 'Saira', sans-serif;
   position: relative;
 }
-
+#content{
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  background: var(--bgColor);
+  background: linear-gradient(135deg, var(--bgColor), var(--bgColorLight));
+  color: var(--textColor);
+  font-family: 'Saira', sans-serif;
+  position: relative;
+  opacity: 1;
+    -webkit-transition: opacity 1000ms linear;
+    transition: opacity 1000ms linear;
+}
 *{
   box-sizing: border-box;
   transition: all 0.12s cubic-bezier(0.42, 0.54, 0.22, 1.26);
@@ -36,6 +53,9 @@ html, body{
   top: 0;
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 audio {
@@ -73,7 +93,7 @@ label.file{
   font-size: 1.25em;
   font-weight: 700;
   box-shadow: 0 20px 60px var(--shadowColorFaint);
-
+  font-family: vaporWAVE;
   cursor: pointer;
 }
 
@@ -107,8 +127,9 @@ label.file.normal{
   border-radius: 10px;
   z-index: 20;
   background-color: white;
-  width: 500px;
+  width: 700px;
   max-width:80%;
+  text-align: center;
 }
 
 .modal.active{
@@ -118,13 +139,12 @@ label.file.normal{
   padding: 10px 15px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
   border-bottom: 1px solid black;
-
+  text-align: center;
 }
 
 .modal-header .title{
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   font-weight: bold;
 }
 
@@ -136,9 +156,19 @@ label.file.normal{
   font-size: 1.25rem;
   font-weight: bold;
 }
+#invis{
+  visibility: hidden;
+}
 
 .modal-body {
   padding: 10px 15px;
+  background: -webkit-linear-gradient(#DD517F, #7998EE);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: vaporWAVE;
+  background-color: #ffffff;
+  font-size: 1.2rem;
+
 }
 
 #overlay{
@@ -172,4 +202,8 @@ label.file.normal{
   font-weight: 700;
   box-shadow: 0 20px 60px var(--shadowColorFaint);
   transform: translate3d(10%, 50%, 0);
+}
+.title{
+  text-align: center;
+  color: red;
 }

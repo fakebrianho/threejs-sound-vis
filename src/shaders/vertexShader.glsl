@@ -3,6 +3,8 @@ uniform float uFreq;
 uniform float uMidF;
 uniform float uHighF;
 uniform float uLowF;
+uniform float uAP;
+uniform float uFP;
 varying vec3 newPos;
 varying vec2 vUv;
 varying vec3 vNormal;
@@ -10,6 +12,8 @@ varying float pulse;
 varying float lowFreq;
 varying float medFreq;
 varying float highFreq;
+varying vec3 vPosition;
+varying vec3 vTarget;
 
 vec3 mod289(vec3 x){
   return x-floor(x*(1./289.))*289.;
@@ -217,20 +221,18 @@ vec4 j1=permute(permute(permute(permute(
       float maxDistance=2.;
       vNormal=normal;
       float noise=snoise(vec4(normal*40.,uTime*.1));
-      float lowFreq=uLowF;
-      float medFreq=uMidF;
-      float highFreq=uHighF;
-      
-      vec3 newPos=position;
-      vec3 target=newPos+curl(newPos.x*frequency,newPos.y*frequency,newPos.z*frequency)*amplitude;
+      lowFreq=uLowF;
+      medFreq=uMidF;
+      highFreq=uHighF;
+      newPos=position;
+      vec3 target=newPos+curl(newPos.x*frequency,newPos.y*frequency,newPos.z*frequency)*amplitude*uAP;
       vec3 cNoise=curl(newPos.x*frequency,newPos.y*frequency,newPos.z*frequency)*amplitude;
-      float d=length(newPos-target)/maxDistance;
+      float d=length(newPos-target)/maxDistance*uFP;
       vec3 tPos=mix(position,target,5.*pow(d,1.));
       pulse=cNoise.x;
-      
-      // vec3 tPos = sin(uTime) * newPos;
-      // vec4 mvPosition = modelViewMatrix * vec4( newPos + cNoise * 0.6 , 1.0 );
+      vTarget=target;
+      vPosition=tPos;
       vec4 mvPosition=modelViewMatrix*vec4(tPos,1.);
       gl_Position=projectionMatrix*mvPosition;
-      gl_PointSize=2.+noise;
+      gl_PointSize=2.+noise+uLowF+uHighF;
     }
