@@ -95,6 +95,7 @@ label.file{
   box-shadow: 0 20px 60px var(--shadowColorFaint);
   font-family: vaporWAVE;
   cursor: pointer;
+  text-align: center;
 }
 
 
@@ -116,6 +117,32 @@ label.file.normal{
   left: 0;
 }
 
+#Default{
+  display: inline-block;
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  transform: translate3d(-50%, -50%, 0);
+  padding: 1rem 2rem;
+  border: 1px solid black;
+  border-radius: 4px;
+  visibility: visible; 
+  background: var(--paperColor);
+  color: var(--textColor);
+  font-size: 1.25em;
+  font-weight: 700;
+  box-shadow: 0 20px 60px var(--shadowColorFaint);
+  font-family: vaporWAVE;
+  cursor: pointer;
+}
+#Default:hover{
+  background: var(--paperColorDark);
+  transform: translate3d(-50%, -55%, 0);
+}
+#Default:active{
+  background: var(--paperColorDark);
+  transform: translate3d(-50%, -45%, 0);
+}
 
 .modal{
   position: fixed;

@@ -6,18 +6,17 @@
     <title>WebGL Audio Visualizer</title>
     <link type="text/css" rel="stylesheet" href="style.css">
     <link rel="shortcut icon" href="#" />
-    <!-- <script src="https://cdn.jsdelivr.net/npm/tweakpane@3.0.5/dist/tweakpane.min.js"></script> -->
 </head>
 <body>
   <div id="content">
     
+    <canvas class="webgl"></canvas>
     <label for="thefile" class="file"> Choose an audio file
       <input type="file" id="thefile" accept="audio/*" />
     </label>
-
+    <button id='Default'>Default Soundtrack</button>
     <audio id="audio" controls></audio>
     <div id="out"></div>
-    <canvas class="webgl"></canvas>
     <div class='modal active' id='modal'>
     <div class='modal-header'>
       <button id='invis' data-close-button class='close-button'>&times;</button>
@@ -25,7 +24,7 @@
       <button data-close-button class='close-button'>&times;</button>
     </div>
     <div class='modal-body'>
-      This is a WebGL Audio Visualizer, upload any .mp3, mp4 and watch as the Visualizer analyzes the audio in real time to create unique animations. On the upper left you'll find a panel with different sliders that you can use to tweak and fine tune the animation. Play around and experiment with various combinations! Enjoy!
+      This is a WebGL Audio Visualizer, upload any .mp3, mp4 and watch as the Visualizer analyzes the audio in real time to create unique animations. On the upper right you'll find a panel with different sliders that you can use to tweak and fine tune the animation. Play around and experiment with various combinations! Enjoy!
     </div>
     </div>
   </div>

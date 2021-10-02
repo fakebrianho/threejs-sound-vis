@@ -20,7 +20,20 @@ Instructions
 ------------------------------*/
 const openModal = document.querySelectorAll("[data-modal-target]");
 const closeModal = document.querySelectorAll("[data-close-button]");
+const def = document.getElementById("Default");
 const overlay = document.getElementById("overlay");
+console.log(def);
+def.addEventListener("click", () => {
+  vizInit(true);
+  const otherButton = document.querySelector(".file");
+  console.log(otherButton);
+  otherButton.style.transform = "translate3d(10%, 50%, 0)";
+  otherButton.style.padding = "0.2rem 2rem";
+  otherButton.style.fontsize = "1rem";
+  otherButton.style.top = 0;
+  otherButton.style.left = 0;
+  def.remove();
+});
 
 openModal.forEach((button) => {
   button.addEventListener("click", () => {
@@ -118,52 +131,62 @@ const sizes = {
 };
 let context;
 let analyser;
-let splitArray = [];
-var vizInit = function () {
+let dataArray;
+let bufferTime;
+let canvas,
+  scene,
+  composer,
+  sphere,
+  camera,
+  renderer,
+  clock,
+  plane,
+  controls,
+  material,
+  innerMesh,
+  innerMaterial;
+var vizInit = function (defaultState = false) {
+  console.log("running");
   var file = document.getElementById("thefile");
   var audio = document.getElementById("audio");
   var fileLabel = document.querySelector("label.file");
-  let dataArray;
-  let bufferTime;
-  console.log(audio.volume);
-  document.onload = function (e) {
-    console.log(e);
-    console.log(audio);
-    audio.play();
-    init();
-  };
-  file.onchange = function () {
-    fileLabel.classList.add("normal");
+  if (defaultState == false) {
+    document.onload = function (e) {
+      console.log(e);
+      console.log(audio);
+      audio.play();
+      init();
+    };
+    file.onchange = function () {
+      def.remove();
+      fileLabel.classList.add("normal");
+      audio.classList.add("active");
+      var files = this.files;
+      audio.src = URL.createObjectURL(files[0]);
+      audio.load();
+      audio.play();
+      init();
+    };
+  }
+  if (defaultState == true) {
     audio.classList.add("active");
-    var files = this.files;
-    audio.src = URL.createObjectURL(files[0]);
-    console.log(audio);
+    audio.src = "/sounds/376737_Skullbeatz___Bad_Cat_Maste.mp3";
     audio.load();
     audio.play();
-    init();
-  };
+    init(defaultState);
+  }
 
-  let gui,
-    canvas,
-    scene,
-    composer,
-    sphere,
-    camera,
-    renderer,
-    clock,
-    plane,
-    controls,
-    material,
-    innerMesh,
-    innerMaterial;
+  canvas = document.querySelector("canvas.webgl");
   /*------------------------------
   Beginning my visualization 
   ------------------------------*/
-  function init() {
+  function init(defaultState = false) {
+    console.log("reun");
     /*------------------------------
     Sound 
     ------------------------------*/
     var context = new AudioContext();
+    console.log(audio);
     var src = context.createMediaElementSource(audio);
     analyser = context.createAnalyser();
     src.connect(analyser);
@@ -173,11 +196,6 @@ var vizInit = function () {
     dataArray = new Uint8Array(bufferLength);
     bufferTime = new Uint8Array(bufferLength);
     analyser.getByteTimeDomainData(bufferTime);
-
-    /*------------------------------
-    Allocating the canvas space
-    ------------------------------*/
-    canvas = document.querySelector("canvas.webgl");
 
     /*------------------------------
     Set up 
@@ -328,6 +346,7 @@ var vizInit = function () {
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }
+
   /*------------------------------
   Animation Loop
   ------------------------------*/
